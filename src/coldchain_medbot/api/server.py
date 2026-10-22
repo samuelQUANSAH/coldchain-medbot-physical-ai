@@ -8,10 +8,12 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from coldchain_medbot.agents.bedrock_supervisor import BedrockPhysicalAISupervisor
+from coldchain_medbot.api.dashboard_ui import DASHBOARD_HTML
 from coldchain_medbot.aws.iot_twin_bridge import AWSPhysicalAICloudBridge
 from coldchain_medbot.simulation.edge_physics_engine import (
     WAREHOUSE_OBSTACLES,
@@ -21,7 +23,7 @@ from coldchain_medbot.simulation.edge_physics_engine import (
 
 app = FastAPI(
     title="ColdChain-MedBot Physical AI Multi-Agent Supervisor API",
-    version="1.0.0",
+    version="1.1.0",
     description=(
         "Autonomous Biopharma Warehouse AMR & Cold-Chain Telemetry Supervisor powered by "
         "Amazon Bedrock (Anthropic Claude), AWS IoT Core, IoT TwinMaker, Hybrid RAG, and Step Functions."
@@ -37,6 +39,17 @@ class RAGSearchRequest(BaseModel):
     query: str
     payload_class: Optional[str] = None
     top_k: int = 3
+
+
+class FaultInjectionRequest(BaseModel):
+    amr_id: str
+    fault_type: str
+
+
+@app.get("/", response_class=HTMLResponse)
+def serve_digital_twin_dashboard() -> HTMLResponse:
+    """Serves the interactive 2D Warehouse Digital Twin & Fault-Injection Console."""
+    return HTMLResponse(content=DASHBOARD_HTML)
 
 
 @app.get("/health")
@@ -57,6 +70,32 @@ def get_fleet_telemetry() -> Dict[str, Any]:
         "warehouse_zones": {k: list(v) for k, v in WAREHOUSE_ZONES.items()},
         "warehouse_obstacles": [list(o) for o in WAREHOUSE_OBSTACLES],
         "fleet": [frame.to_dict() for frame in simulator.fleet.values()],
+    }
+
+
+@app.post("/api/v1/fault/inject")
+def inject_physical_fault(req: FaultInjectionRequest) -> Dict[str, Any]:
+    """Injects a physical fault scenario into a target AMR for live Digital Twin testing."""
+    try:
+        frame = simulator.inject_fault(req.amr_id, req.fault_type)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "status": "injected",
+        "amr_id": req.amr_id,
+        "fault_type": req.fault_type,
+        "updated_telemetry": frame.to_dict(),
+    }
+
+
+@app.post("/api/v1/fleet/reset")
+def reset_warehouse_fleet() -> Dict[str, Any]:
+    """Resets all 4 AMRs and Digital Twin state to initial warehouse parameters."""
+    frames = simulator.reset_simulation()
+    return {
+        "status": "reset",
+        "tick": simulator.tick_count,
+        "fleet": [f.to_dict() for f in frames],
     }
 
 
