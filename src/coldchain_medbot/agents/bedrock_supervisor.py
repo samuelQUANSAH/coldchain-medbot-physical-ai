@@ -21,6 +21,7 @@ except ImportError:
     BotoCoreError = Exception  # type: ignore
     ClientError = Exception  # type: ignore
 
+from coldchain_medbot.agents.multicloud_router import MultiCloudModelRouter
 from coldchain_medbot.agents.specialist_agents import (
     AMRFleetNavigationAgent,
     CryoThermalDiagnosticsAgent,
@@ -39,7 +40,8 @@ from coldchain_medbot.rag.knowledge_base import HybridColdChainKnowledgeBase
 
 class BedrockPhysicalAISupervisor:
     """
-    Multi-Agent Supervisor powered by Amazon Bedrock (`anthropic.claude-3-5-sonnet-20241022-v2:0`).
+    Multi-Agent Supervisor powered by Amazon Bedrock (`anthropic.claude-3-5-sonnet-20241022-v2:0`)
+    with automatic circuit-breaker failover to Google Cloud Vertex AI (`vertex_ai/gemini-2.5-pro`).
     Orchestrates:
       1. CryoThermalDiagnosticsAgent
       2. AMRFleetNavigationAgent
@@ -60,68 +62,22 @@ class BedrockPhysicalAISupervisor:
         else:
             self.enable_live_bedrock = enable_live_bedrock
 
+        self.router = MultiCloudModelRouter(
+            primary_bedrock_model=self.model_id,
+            aws_region=self.region_name,
+            enable_live_cloud=self.enable_live_bedrock,
+        )
         self.kb = HybridColdChainKnowledgeBase()
         self.thermal_agent = CryoThermalDiagnosticsAgent()
         self.nav_agent = AMRFleetNavigationAgent()
         self.rag_agent = RegulatoryComplianceRAGAgent(self.kb)
         self.safety_shield = PhysicalSafetyShieldVerifier()
 
-        self._bedrock_client = None
-        if self.enable_live_bedrock and boto3 is not None:
-            try:
-                self._bedrock_client = boto3.client("bedrock-runtime", region_name=self.region_name)
-            except Exception:
-                self._bedrock_client = None
-
-    def _invoke_bedrock_claude_synthesis(
-        self,
-        frame: AMRTelemetryFrame,
-        assessments: List[AgentAssessment],
-    ) -> Optional[str]:
-        """
-        Calls Amazon Bedrock `converse` API with Anthropic Claude to synthesize the
-        multi-agent physical telemetry and regulatory SOP citations.
-        Falls back gracefully if running in local edge/offline mode.
-        """
-        if not self._bedrock_client:
-            return None
-
-        system_prompt = (
-            "You are the Amazon Bedrock Physical AI Supervisor for an autonomous biopharma "
-            "cold-chain warehouse AMR fleet. Synthesize the specialist subagent assessments "
-            "(Cryo-Thermal, A* Navigation, and FDA/USP RAG Compliance) into a concise 2-sentence "
-            "operational directive citing the exact regulatory standard and physical actuator command."
-        )
-        user_payload = {
-            "amr_id": frame.amr_id,
-            "batch_id": frame.cryo.payload_batch_id,
-            "telemetry": frame.to_dict(),
-            "subagent_assessments": [asdict(a) for a in assessments],
-        }
-
-        try:
-            response = self._bedrock_client.converse(
-                modelId=self.model_id,
-                system=[{"text": system_prompt}],
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [{"text": json.dumps(user_payload, default=str)}],
-                    }
-                ],
-                inferenceConfig={"maxTokens": 220, "temperature": 0.1},
-            )
-            blocks = response.get("output", {}).get("message", {}).get("content", [])
-            if blocks and "text" in blocks[0]:
-                return blocks[0]["text"].strip()
-        except (BotoCoreError, ClientError, Exception):
-            return None
-        return None
-
     def orchestrate_amr_decision(self, frame: AMRTelemetryFrame) -> Dict[str, Any]:
         """
         Executes the full 4-agent workflow for a single AMR telemetry frame and returns
-        the complete multi-agent trace plus the safety-verified PhysicalActuatorCommand.
+        the complete multi-agent trace, multi-cloud router telemetry, and the safety-verified
+        PhysicalActuatorCommand.
         """
         t0 = time.perf_counter()
 
@@ -136,7 +92,7 @@ class BedrockPhysicalAISupervisor:
 
         assessments = [thermal_res, nav_res, rag_res]
 
-        # Step 4: Supervisor Decision Synthesis (Bedrock Claude Converse API or Neuro-Symbolic Synthesis)
+        # Step 4: Supervisor Decision Synthesis via Multi-Cloud Router (Amazon Bedrock -> Vertex AI Failover)
         proposed_action = thermal_res.recommended_action
         if nav_res.recommended_action == ActuatorActionType.EMERGENCY_STOP:
             proposed_action = ActuatorActionType.EMERGENCY_STOP
@@ -150,15 +106,28 @@ class BedrockPhysicalAISupervisor:
         target_wp: Tuple[float, float] = (float(target_wp_list[0]), float(target_wp_list[1]))
         rec_vel = float(nav_res.metrics["recommended_velocity_mps"])
 
-        bedrock_rationale = self._invoke_bedrock_claude_synthesis(frame, assessments)
-        if not bedrock_rationale:
-            citations_str = ", ".join(rag_res.citations)
-            bedrock_rationale = (
-                f"[Bedrock Supervisor ({self.model_id})] Synthesized {thermal_res.severity.value} "
-                f"state for {frame.amr_id} ({frame.cryo.payload_batch_id}): {thermal_res.summary} "
-                f"Executing {proposed_action.value} toward {nav_res.metrics['assigned_zone']} "
-                f"at {rec_vel} m/s per {citations_str}."
-            )
+        citations_str = ", ".join(rag_res.citations)
+        default_rationale = (
+            f"[Bedrock Supervisor ({self.model_id})] Synthesized {thermal_res.severity.value} "
+            f"state for {frame.amr_id} ({frame.cryo.payload_batch_id}): {thermal_res.summary} "
+            f"Executing {proposed_action.value} toward {nav_res.metrics['assigned_zone']} "
+            f"at {rec_vel} m/s per {citations_str}."
+        )
+        system_prompt = (
+            "You are the Amazon Bedrock Physical AI Supervisor for an autonomous biopharma "
+            "cold-chain warehouse AMR fleet. Synthesize the specialist subagent assessments "
+            "into a concise 2-sentence operational directive citing the regulatory standard."
+        )
+        routed = self.router.route_supervisor_synthesis(
+            system_prompt=system_prompt,
+            payload_dict={
+                "amr_id": frame.amr_id,
+                "batch_id": frame.cryo.payload_batch_id,
+                "subagent_assessments": [asdict(a) for a in assessments],
+            },
+            deterministic_fallback_text=default_rationale,
+        )
+        supervisor_rationale = routed["text"]
 
         # Step 5: Deterministic Physical Safety Shield Verification
         verified_cmd: PhysicalActuatorCommand = self.safety_shield.verify_and_build_command(
@@ -166,7 +135,7 @@ class BedrockPhysicalAISupervisor:
             proposed_action=proposed_action,
             target_waypoint=target_wp,
             proposed_velocity_mps=rec_vel,
-            supervisor_rationale=bedrock_rationale,
+            supervisor_rationale=supervisor_rationale,
         )
 
         latency_ms = round((time.perf_counter() - t0) * 1000.0, 2)
@@ -175,6 +144,7 @@ class BedrockPhysicalAISupervisor:
             "amr_id": frame.amr_id,
             "severity": thermal_res.severity.value,
             "orchestration_latency_ms": latency_ms,
+            "multicloud_inference": routed["telemetry"],
             "subagent_traces": [
                 {
                     "agent_name": a.agent_name,
