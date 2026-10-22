@@ -1,3 +1,15 @@
+---
+title: ColdChain-MedBot Physical AI Supervisor
+emoji: ❄️
+colorFrom: blue
+colorTo: cyan
+sdk: docker
+app_port: 7860
+pinned: true
+license: mit
+short_description: AWS Bedrock + IoT TwinMaker Physical AI AMR Supervisor
+---
+
 # ColdChain-MedBot: Autonomous Warehouse AMR & Biopharma Cold-Chain Physical AI Multi-Agent Supervisor
 
 [![AWS Bedrock](https://img.shields.io/badge/Amazon_Bedrock-Anthropic_Claude_3.5_Sonnet-FF9900?logo=amazonaws)](https://aws.amazon.com/bedrock/)
