@@ -110,3 +110,38 @@ def test_cdk_cloudformation_stack_synthesis() -> None:
     assert "ColdChainAuditLedgerTable" in resources
     assert "AMRTelemetryIoTTopicRule" in resources
     assert "BedrockSupervisorIAMRole" in resources
+
+
+def test_fault_injection_and_digital_twin_api() -> None:
+    from fastapi.testclient import TestClient
+    from coldchain_medbot.api.server import app
+
+    client = TestClient(app)
+
+    # 1. Verify Digital Twin HTML console renders at GET /
+    ui_res = client.get("/")
+    assert ui_res.status_code == 200
+    assert "ColdChain-MedBot Physical AI" in ui_res.text
+    assert "twinCanvas" in ui_res.text
+
+    # 2. Inject LIDAR_CORRIDOR_OBSTACLE on AMR-DELTA-04 and run closed-loop step
+    inj_res = client.post(
+        "/api/v1/fault/inject",
+        json={"amr_id": "AMR-DELTA-04", "fault_type": "LIDAR_CORRIDOR_OBSTACLE"},
+    )
+    assert inj_res.status_code == 200
+    assert inj_res.json()["updated_telemetry"]["kinematics"]["lidar_min_obstacle_dist_m"] == 0.32
+
+    step_res = client.post("/api/v1/orchestrate/step?dt_seconds=10")
+    assert step_res.status_code == 200
+    delta_orc = [
+        r for r in step_res.json()["orchestration_results"] if r["amr_id"] == "AMR-DELTA-04"
+    ][0]
+    assert delta_orc["actuator_command"]["action_type"] == "EMERGENCY_STOP"
+    assert delta_orc["actuator_command"]["max_velocity_mps"] == 0.0
+
+    # 3. Reset fleet
+    rst_res = client.post("/api/v1/fleet/reset")
+    assert rst_res.status_code == 200
+    assert rst_res.json()["tick"] == 0
+
