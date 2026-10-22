@@ -203,21 +203,66 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       font-size: 0.73rem;
       color: #cbd5e1;
     }
+    .roi-strip {
+      background: #0b1324;
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 8px 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+      font-size: 0.78rem;
+    }
+    .roi-metric {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .roi-label {
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .roi-val {
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: var(--accent-emerald);
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="brand-title">
       <span>ColdChain-MedBot Physical AI</span>
-      <span class="badge">Amazon Bedrock (Claude 3.5 Sonnet)</span>
+      <span class="badge" id="cloudProviderBadge">Primary: Amazon Bedrock (Claude 3.5 Sonnet)</span>
       <span class="badge">AWS IoT TwinMaker + 21 CFR Part 11</span>
     </div>
     <div class="controls-bar">
       <button class="btn-primary" onclick="stepSimulation()">&#9654; Step Closed-Loop Cycle (+10s)</button>
       <button id="autoBtn" onclick="toggleAutoRun()">&#9201; Auto-Loop: OFF</button>
+      <button id="failoverBtn" onclick="toggleCloudFailover()">&#9729; Failover: Bedrock &rarr; Vertex AI (OFF)</button>
       <button onclick="resetFleet()">&#8635; Reset Warehouse Fleet</button>
     </div>
   </header>
+
+  <section class="roi-strip" aria-label="Executive Pre-Sales ROI Metrics">
+    <div class="roi-metric">
+      <span class="roi-label">Protected Biologic Value</span>
+      <span class="roi-val" id="roiProtectedVal">$1,840,000 USD</span>
+    </div>
+    <div class="roi-metric">
+      <span class="roi-label">Prevented Spoilage Value</span>
+      <span class="roi-val" id="roiSavedVal" style="color:#38bdf8;">$0 USD (0 Saved)</span>
+    </div>
+    <div class="roi-metric">
+      <span class="roi-label">Excursion MTTR Reduction</span>
+      <span class="roi-val" id="roiMttrVal">99.96% (&lt;0.5s vs 22m Manual)</span>
+    </div>
+    <div class="roi-metric">
+      <span class="roi-label">Multi-Cloud AI Gateway</span>
+      <span class="roi-val" id="roiRouterVal" style="color:#a5b4fc;">CLOSED_PRIMARY_BEDROCK</span>
+    </div>
+  </section>
 
   <main>
     <!-- Left Column: 2D Spatial Digital Twin Canvas + Fault Injection Console -->
@@ -274,6 +319,25 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     let latestTelemetry = null;
     let latestOrchestration = [];
     let autoTimer = null;
+    let failoverActive = false;
+
+    async function fetchPresalesSummary() {
+      try {
+        const res = await fetch('/api/v1/reports/presales-summary');
+        const roi = await res.json();
+        const kpi = roi.executive_kpis;
+        const mc = roi.multicloud_resilience;
+        document.getElementById('roiProtectedVal').textContent =
+          `$${kpi.total_biologic_payload_protected_usd.toLocaleString()} USD`;
+        document.getElementById('roiSavedVal').textContent =
+          `$${kpi.estimated_spoilage_prevented_usd.toLocaleString()} USD (${kpi.excursions_mitigated_count} Mitigated)`;
+        document.getElementById('roiMttrVal').textContent =
+          `${kpi.mttr_reduction_pct}% (${kpi.mean_autonomous_orchestration_ms}ms vs 22m)`;
+        document.getElementById('roiRouterVal').textContent = mc.circuit_breaker_state;
+      } catch (e) {
+        console.error(e);
+      }
+    }
 
     async function fetchTelemetry() {
       const res = await fetch('/api/v1/fleet/telemetry');
@@ -282,6 +346,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       drawWarehouseTwin();
       document.getElementById('tickCounter').textContent =
         `Tick #${latestTelemetry.tick} | ${latestTelemetry.fleet.length} AMRs Active`;
+      await fetchPresalesSummary();
     }
 
     async function stepSimulation() {
@@ -290,6 +355,25 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       latestOrchestration = data.orchestration_results || [];
       renderTraces(latestOrchestration);
       await fetchTelemetry();
+    }
+
+    async function toggleCloudFailover() {
+      failoverActive = !failoverActive;
+      await fetch('/api/v1/router/failover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ simulate_bedrock_outage: failoverActive })
+      });
+      const btn = document.getElementById('failoverBtn');
+      const badge = document.getElementById('cloudProviderBadge');
+      if (failoverActive) {
+        btn.textContent = '☁ Failover: Vertex AI ACTIVE (Gemini 1.5 Pro)';
+        badge.textContent = 'Failover Active: Google Vertex AI (Gemini 1.5 Pro)';
+      } else {
+        btn.textContent = '☁ Failover: Bedrock → Vertex AI (OFF)';
+        badge.textContent = 'Primary: Amazon Bedrock (Claude 3.5 Sonnet)';
+      }
+      await stepSimulation();
     }
 
     async function injectFault() {
