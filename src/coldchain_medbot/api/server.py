@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from coldchain_medbot.agents.bedrock_supervisor import BedrockPhysicalAISupervisor
 from coldchain_medbot.api.dashboard_ui import DASHBOARD_HTML
 from coldchain_medbot.aws.iot_twin_bridge import AWSPhysicalAICloudBridge
+from coldchain_medbot.reporting.presales_roi_engine import generate_presales_roi_report
 from coldchain_medbot.simulation.edge_physics_engine import (
     WAREHOUSE_OBSTACLES,
     WAREHOUSE_ZONES,
@@ -23,10 +24,11 @@ from coldchain_medbot.simulation.edge_physics_engine import (
 
 app = FastAPI(
     title="ColdChain-MedBot Physical AI Multi-Agent Supervisor API",
-    version="1.1.0",
+    version="1.2.0",
     description=(
         "Autonomous Biopharma Warehouse AMR & Cold-Chain Telemetry Supervisor powered by "
-        "Amazon Bedrock (Anthropic Claude), AWS IoT Core, IoT TwinMaker, Hybrid RAG, and Step Functions."
+        "Amazon Bedrock (Anthropic Claude), Google Vertex AI Failover, AWS IoT Core, IoT TwinMaker, "
+        "Hybrid RAG, and Step Functions."
     ),
 )
 
@@ -46,6 +48,10 @@ class FaultInjectionRequest(BaseModel):
     fault_type: str
 
 
+class FailoverToggleRequest(BaseModel):
+    simulate_bedrock_outage: bool
+
+
 @app.get("/", response_class=HTMLResponse)
 def serve_digital_twin_dashboard() -> HTMLResponse:
     """Serves the interactive 2D Warehouse Digital Twin & Fault-Injection Console."""
@@ -58,6 +64,7 @@ def health_check() -> Dict[str, Any]:
         "status": "healthy",
         "service": "coldchain-medbot-physical-ai",
         "bedrock_model": supervisor.model_id,
+        "multicloud_circuit": supervisor.router.circuit_state,
         "active_amrs": len(simulator.fleet),
         "simulation_tick": simulator.tick_count,
     }
@@ -167,3 +174,20 @@ def query_regulatory_rag(req: RAGSearchRequest) -> Dict[str, Any]:
         top_k=req.top_k,
     )
     return {"query": req.query, "results": hits}
+
+
+@app.post("/api/v1/router/failover")
+def toggle_multicloud_failover(req: FailoverToggleRequest) -> Dict[str, Any]:
+    """Toggles simulated Amazon Bedrock regional outage to test Google Cloud Vertex AI failover."""
+    supervisor.router.simulated_primary_outage = req.simulate_bedrock_outage
+    return supervisor.router.get_router_summary()
+
+
+@app.get("/api/v1/reports/presales-summary")
+def get_executive_presales_roi_summary() -> Dict[str, Any]:
+    """Generates the Executive Pre-Sales ROI & FDA 21 CFR Part 11 Compliance Summary."""
+    return generate_presales_roi_report(
+        audit_ledger=cloud_bridge.dynamodb_audit_ledger,
+        step_functions_executions=cloud_bridge.step_functions_executions,
+        router_summary=supervisor.router.get_router_summary(),
+    )
