@@ -145,3 +145,41 @@ def test_fault_injection_and_digital_twin_api() -> None:
     assert rst_res.status_code == 200
     assert rst_res.json()["tick"] == 0
 
+
+def test_multicloud_bedrock_to_vertex_ai_failover_and_presales_roi_report() -> None:
+    from fastapi.testclient import TestClient
+    from coldchain_medbot.api.server import app
+
+    client = TestClient(app)
+
+    # 1. Simulate Amazon Bedrock regional outage -> automatic failover to Google Vertex AI
+    failover_res = client.post(
+        "/api/v1/router/failover",
+        json={"simulate_bedrock_outage": True},
+    )
+    assert failover_res.status_code == 200
+    assert failover_res.json()["circuit_state"] == "OPEN_FAILOVER_TO_VERTEX_AI"
+
+    # 2. Step orchestration while on Google Vertex AI failover
+    step_res = client.post("/api/v1/orchestrate/step?dt_seconds=10")
+    assert step_res.status_code == 200
+
+    # 3. Fetch Executive Pre-Sales ROI & 21 CFR Part 11 report
+    roi_res = client.get("/api/v1/reports/presales-summary")
+    assert roi_res.status_code == 200
+    roi_data = roi_res.json()
+    assert roi_data["executive_kpis"]["total_biologic_value_protected_usd"] >= 50000.0
+    assert roi_data["executive_kpis"]["mttr_reduction_pct"] == 99.96
+    assert roi_data["multicloud_ai_gateway"]["circuit_state"] == "OPEN_FAILOVER_TO_VERTEX_AI"
+    assert roi_data["multicloud_ai_gateway"]["failover_count"] >= 4
+    assert roi_data["regulatory_compliance_21cfr11"]["audit_integrity_rate_pct"] == 100.0
+
+    # 4. Restore Primary Amazon Bedrock
+    restore_res = client.post(
+        "/api/v1/router/failover",
+        json={"simulate_bedrock_outage": False},
+    )
+    assert restore_res.status_code == 200
+    assert restore_res.json()["circuit_state"] == "CLOSED_PRIMARY_BEDROCK"
+
+

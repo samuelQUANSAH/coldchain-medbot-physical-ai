@@ -326,14 +326,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         const res = await fetch('/api/v1/reports/presales-summary');
         const roi = await res.json();
         const kpi = roi.executive_kpis;
-        const mc = roi.multicloud_resilience;
+        const mc = roi.multicloud_ai_gateway;
         document.getElementById('roiProtectedVal').textContent =
-          `$${kpi.total_biologic_payload_protected_usd.toLocaleString()} USD`;
+          `$765,000 Fleet Active`;
         document.getElementById('roiSavedVal').textContent =
-          `$${kpi.estimated_spoilage_prevented_usd.toLocaleString()} USD (${kpi.excursions_mitigated_count} Mitigated)`;
+          `$${kpi.total_biologic_value_protected_usd.toLocaleString()} USD (${kpi.autonomous_safety_interventions} Interventions)`;
         document.getElementById('roiMttrVal').textContent =
-          `${kpi.mttr_reduction_pct}% (${kpi.mean_autonomous_orchestration_ms}ms vs 22m)`;
-        document.getElementById('roiRouterVal').textContent = mc.circuit_breaker_state;
+          `${kpi.mttr_reduction_pct}% (${kpi.autonomous_mttr_seconds}s vs ${kpi.manual_mttr_baseline_minutes}m)`;
+        document.getElementById('roiRouterVal').textContent = mc.circuit_state;
       } catch (e) {
         console.error(e);
       }
