@@ -1,0 +1,48 @@
+name: Physical AI Multi-Agent & AWS CDK CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-physical-ai-suite:
+    name: Pytest, Closed-Loop Simulation & CDK Synthesis
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run Physical AI Multi-Agent & Safety Shield Test Suite
+        env:
+          PYTHONPATH: src
+        run: |
+          pytest -v
+
+      - name: Run 2-Cycle Closed-Loop Edge AMR & Cryo Simulation
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m coldchain_medbot.cli --cycles 2 --dt 10.0
+
+      - name: Verify Zero-Trust AWS CDK CloudFormation Synthesis
+        run: |
+          python -c "from infrastructure.cdk_stack import synthesize_cloudformation_template; tpl = synthesize_cloudformation_template(); assert 'Resources' in tpl and len(tpl['Resources']) >= 6"
