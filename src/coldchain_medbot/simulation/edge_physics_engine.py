@@ -316,3 +316,67 @@ class WarehousePhysicsSimulator:
             kin.linear_velocity_mps = 0.0
 
         return frame
+
+    def inject_fault(self, amr_id: str, fault_type: str) -> AMRTelemetryFrame:
+        """
+        Injects a physical fault scenario into the specified AMR for interactive
+        Digital Twin pre-sales demonstrations and safety-shield verification.
+        """
+        if amr_id not in self.fleet:
+            raise ValueError(f"Unknown AMR ID: {amr_id}")
+
+        frame = self.fleet[amr_id]
+        fault_key = fault_type.upper()
+
+        if fault_key == "CRYO_LN2_VALVE_FAILURE":
+            frame.cryo.internal_temp_c = round(
+                THERMAL_ENVELOPES[frame.cryo.payload_class].max_temp_c + 4.5, 2
+            )
+            frame.cryo.temp_rate_of_change_c_per_min = 2.40
+            frame.cryo.door_seal_pressure_kpa = 71.0
+            if "CRYO_LN2_VALVE_FAILURE" not in frame.active_fault_codes:
+                frame.active_fault_codes.append("CRYO_LN2_VALVE_FAILURE")
+
+        elif fault_key == "COMPRESSOR_CAVITATION_SPIKE":
+            frame.cryo.compressor_vibration_hz = 168.0
+            frame.cryo.temp_rate_of_change_c_per_min = 0.95
+            frame.cryo.door_seal_pressure_kpa = 82.5
+            if "COMPRESSOR_CAVITATION_SPIKE" not in frame.active_fault_codes:
+                frame.active_fault_codes.append("COMPRESSOR_CAVITATION_SPIKE")
+
+        elif fault_key == "LIDAR_CORRIDOR_OBSTACLE":
+            frame.kinematics.lidar_min_obstacle_dist_m = 0.32
+            if "LIDAR_CORRIDOR_OBSTACLE" not in frame.active_fault_codes:
+                frame.active_fault_codes.append("LIDAR_CORRIDOR_OBSTACLE")
+
+        elif fault_key == "BATTERY_CRITICAL_DRAIN":
+            frame.battery_soc_pct = 11.5
+            if "BATTERY_CRITICAL_DRAIN" not in frame.active_fault_codes:
+                frame.active_fault_codes.append("BATTERY_CRITICAL_DRAIN")
+
+        elif fault_key == "CLEAR_FAULTS":
+            env = THERMAL_ENVELOPES[frame.cryo.payload_class]
+            frame.cryo.internal_temp_c = env.target_temp_c
+            frame.cryo.temp_rate_of_change_c_per_min = 0.01
+            frame.cryo.compressor_vibration_hz = 42.0
+            frame.cryo.door_seal_pressure_kpa = 101.3
+            frame.kinematics.lidar_min_obstacle_dist_m = 5.5
+            frame.kinematics.linear_velocity_mps = 1.25
+            frame.battery_soc_pct = 90.0
+            frame.active_fault_codes = []
+
+        else:
+            raise ValueError(f"Unsupported fault_type: {fault_type}")
+
+        self.temp_histories[amr_id].append(frame.cryo.internal_temp_c)
+        frame.cryo.mean_kinetic_temp_c = compute_mean_kinetic_temperature(self.temp_histories[amr_id])
+        return frame
+
+    def reset_simulation(self) -> List[AMRTelemetryFrame]:
+        """Resets the entire warehouse AMR fleet to initial conditions."""
+        self.tick_count = 0
+        self.temp_histories.clear()
+        self.fleet.clear()
+        self._init_default_fleet()
+        return list(self.fleet.values())
+
