@@ -3,152 +3,439 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ColdChain-MedBot | AWS Bedrock Physical AI Digital Twin Console</title>
+  <title>ColdChain-MedBot Physical AI | AWS Bedrock &amp; IoT TwinMaker Mission Control</title>
   <style>
     :root {
-      --bg-primary: #070b14;
-      --bg-panel: #0f172a;
-      --bg-card: #162038;
-      --border-subtle: #1e293b;
+      --bg-deep: #04070f;
+      --bg-surface: rgba(13, 21, 38, 0.78);
+      --bg-card: rgba(20, 31, 56, 0.72);
+      --bg-card-hover: rgba(28, 43, 75, 0.85);
+      --border-glass: rgba(148, 163, 184, 0.15);
+      --border-highlight: rgba(6, 182, 212, 0.45);
       --text-primary: #f8fafc;
-      --text-muted: #94a3b8;
-      --accent-cyan: #06b6d4;
-      --accent-emerald: #10b981;
-      --accent-amber: #f59e0b;
-      --accent-crimson: #ef4444;
-      --accent-indigo: #6366f1;
+      --text-secondary: #cbd5e1;
+      --text-muted: #64748b;
+      --cyan: #06b6d4;
+      --cyan-glow: rgba(6, 182, 212, 0.22);
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.2);
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.2);
+      --crimson: #ef4444;
+      --crimson-glow: rgba(239, 68, 68, 0.25);
+      --indigo: #6366f1;
+      --violet: #8b5cf6;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-deep);
+      background-image:
+        radial-gradient(circle at 12% 18%, rgba(6, 182, 212, 0.12), transparent 32%),
+        radial-gradient(circle at 88% 12%, rgba(99, 102, 241, 0.12), transparent 30%),
+        radial-gradient(circle at 50% 90%, rgba(16, 185, 129, 0.08), transparent 38%);
       color: var(--text-primary);
       min-height: 100dvh;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
     }
+
+    /* Top Mission Control Bar */
     header {
-      background: var(--bg-panel);
-      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(7, 12, 24, 0.84);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border-glass);
       padding: 12px 24px;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 14px;
     }
+
+    .brand-cluster {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(99, 102, 241, 0.3));
+      border: 1px solid var(--border-highlight);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 0 18px var(--cyan-glow);
+      font-size: 1.15rem;
+    }
+
+    .brand-title-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
     .brand-title {
-      font-size: clamp(1.05rem, 0.85rem + 0.9vw, 1.4rem);
-      font-weight: 700;
-      letter-spacing: 0.3px;
+      font-size: clamp(1rem, 0.88rem + 0.65vw, 1.3rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
       display: flex;
       align-items: center;
       gap: 10px;
+      background: linear-gradient(90deg, #ffffff, #bae6fd, #a5b4fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
-    .badge {
-      font-size: 0.75rem;
-      padding: 3px 9px;
+
+    .brand-subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .pill-badge {
+      font-size: 0.73rem;
+      padding: 4px 11px;
       border-radius: 999px;
       font-weight: 600;
-      background: rgba(6, 182, 212, 0.15);
-      color: var(--accent-cyan);
-      border: 1px solid rgba(6, 182, 212, 0.35);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(6, 182, 212, 0.12);
+      color: #67e8f9;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      letter-spacing: 0.01em;
     }
+
+    .pill-badge.vertex-mode {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fde68a;
+      border-color: rgba(245, 158, 11, 0.45);
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(1.25); }
+    }
+
     .controls-bar {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
     }
+
     button, select {
-      background: var(--bg-card);
+      background: rgba(20, 31, 56, 0.85);
       color: var(--text-primary);
-      border: 1px solid #334155;
-      padding: 7px 13px;
-      border-radius: 6px;
-      font-size: 0.82rem;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      padding: 8px 14px;
+      border-radius: 9px;
+      font-size: 0.8rem;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
-    button:hover {
-      background: #1e293b;
-      border-color: var(--accent-cyan);
+
+    button:hover, select:hover {
+      background: rgba(30, 46, 82, 0.95);
+      border-color: var(--cyan);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(6, 182, 212, 0.15);
     }
+
     button.btn-primary {
-      background: var(--accent-cyan);
-      color: #031525;
-      border-color: var(--accent-cyan);
+      background: linear-gradient(135deg, #06b6d4, #2563eb);
+      color: #ffffff;
+      border: 1px solid rgba(103, 232, 249, 0.5);
+      box-shadow: 0 4px 16px rgba(6, 182, 212, 0.28);
     }
+
+    button.btn-primary:hover {
+      background: linear-gradient(135deg, #0891b2, #1d4ed8);
+      box-shadow: 0 6px 22px rgba(6, 182, 212, 0.4);
+    }
+
+    button.btn-failover-active {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 88, 12, 0.3));
+      color: #fde68a;
+      border-color: #f59e0b;
+    }
+
     button.btn-danger {
-      background: rgba(239, 68, 68, 0.16);
-      color: #fca5a5;
-      border-color: rgba(239, 68, 68, 0.45);
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.22), rgba(185, 28, 28, 0.28));
+      color: #fecaca;
+      border-color: rgba(239, 68, 68, 0.5);
     }
+
+    button.btn-danger:hover {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(185, 28, 28, 0.45));
+      border-color: #f87171;
+    }
+
+    /* Executive KPI Ribbon */
+    .roi-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      padding: 14px 24px 4px;
+      max-width: 1680px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .roi-card {
+      background: var(--bg-surface);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border-glass);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .roi-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      background: linear-gradient(180deg, var(--cyan), var(--indigo));
+    }
+
+    .roi-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .roi-label {
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .roi-tag {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.14);
+      color: #34d399;
+    }
+
+    .roi-val {
+      font-weight: 800;
+      font-size: clamp(0.95rem, 0.85rem + 0.35vw, 1.15rem);
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .roi-bar {
+      height: 4px;
+      width: 100%;
+      background: rgba(148, 163, 184, 0.14);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .roi-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--cyan), var(--emerald));
+      transition: width 0.4s ease;
+    }
+
+    /* Main Workspace Grid */
     main {
       flex: 1;
       display: grid;
-      grid-template-columns: 1.35fr 1fr;
+      grid-template-columns: 1.38fr 1fr;
       gap: 16px;
-      padding: 16px 24px;
+      padding: 12px 24px 24px;
+      max-width: 1680px;
+      width: 100%;
+      margin: 0 auto;
     }
-    @media (max-width: 1100px) {
+
+    @media (max-width: 1180px) {
       main { grid-template-columns: 1fr; }
     }
+
     .panel {
-      background: var(--bg-panel);
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      padding: 14px;
+      background: var(--bg-surface);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-glass);
+      border-radius: 14px;
+      padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
       container-type: inline-size;
+      box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.5);
     }
+
     .panel-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid var(--border-subtle);
-      padding-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-glass);
+      padding-bottom: 10px;
     }
+
+    .panel-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .panel-title {
-      font-size: clamp(0.9rem, 0.8rem + 0.35vw, 1.05rem);
+      font-size: clamp(0.92rem, 0.84rem + 0.35vw, 1.06rem);
       font-weight: 700;
-      color: #e2e8f0;
+      color: #f1f5f9;
+      letter-spacing: -0.01em;
     }
+
+    /* 2D Spatial Canvas */
     .canvas-wrapper {
       width: 100%;
       aspect-ratio: 3 / 2;
-      background: #050911;
-      border: 1px solid #1e293b;
-      border-radius: 8px;
+      background: radial-gradient(circle at 50% 50%, #091326 0%, #040812 100%);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      border-radius: 12px;
       overflow: hidden;
       position: relative;
+      box-shadow: inset 0 0 40px rgba(6, 182, 212, 0.07);
     }
+
     canvas {
       width: 100%;
       height: 100%;
       display: block;
     }
+
+    .canvas-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 0.73rem;
+      color: var(--text-secondary);
+      padding: 4px 2px 0;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+    }
+
+    /* Fault Injection Bar */
+    .fault-box {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 27, 75, 0.45));
+      border: 1px solid rgba(99, 102, 241, 0.28);
+      border-radius: 11px;
+      padding: 12px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .fault-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      flex: 1;
+    }
+
+    /* AMR Cryo Telemetry Cards */
     .fleet-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 10px;
     }
-    @container (max-width: 520px) {
+
+    @container (max-width: 540px) {
       .fleet-grid { grid-template-columns: 1fr; }
     }
+
     .amr-card {
       background: var(--bg-card);
-      border: 1px solid #26334d;
-      border-radius: 8px;
-      padding: 10px 12px;
-      font-size: 0.8rem;
+      border: 1px solid var(--border-glass);
+      border-radius: 11px;
+      padding: 12px 14px;
+      font-size: 0.78rem;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 8px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
     }
+
+    .amr-card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(6, 182, 212, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .amr-card.card-CRITICAL_EXCURSION {
+      border-color: rgba(239, 68, 68, 0.55);
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.14);
+    }
+
+    .amr-card.card-WARNING {
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+
     .amr-card-hdr {
       display: flex;
       justify-content: space-between;
@@ -156,101 +443,220 @@
       font-weight: 700;
       font-size: 0.88rem;
     }
-    .sev-NOMINAL { color: var(--accent-emerald); }
-    .sev-ADVISORY { color: var(--accent-cyan); }
-    .sev-WARNING { color: var(--accent-amber); }
-    .sev-CRITICAL_EXCURSION { color: var(--accent-crimson); }
-    .fault-box {
-      background: #111a2e;
-      border: 1px solid #263554;
-      border-radius: 8px;
-      padding: 10px 12px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
+
+    .sev-badge {
+      font-size: 0.66rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 999px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
+
+    .sev-NOMINAL {
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+    .sev-ADVISORY {
+      color: #38bdf8;
+      background: rgba(6, 182, 212, 0.14);
+      border: 1px solid rgba(6, 182, 212, 0.35);
+    }
+    .sev-WARNING {
+      color: #fbbf24;
+      background: rgba(245, 158, 11, 0.16);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+    }
+    .sev-CRITICAL_EXCURSION {
+      color: #f87171;
+      background: rgba(239, 68, 68, 0.18);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+    }
+
+    .amr-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      background: rgba(7, 11, 22, 0.55);
+      padding: 7px 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.08);
+    }
+
+    .m-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .m-lbl {
+      font-size: 0.63rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .m-val {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .temp-gauge-track {
+      height: 5px;
+      width: 100%;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .temp-gauge-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.35s ease;
+    }
+
+    /* Multi-Agent Supervisor Trace Feed */
     .trace-feed {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      max-height: 440px;
+      gap: 9px;
+      max-height: 390px;
       overflow-y: auto;
       padding-right: 4px;
     }
+
     .trace-item {
       background: var(--bg-card);
-      border-left: 3px solid var(--accent-cyan);
-      border-radius: 6px;
-      padding: 9px 11px;
-      font-size: 0.78rem;
-      line-height: 1.4;
-    }
-    .trace-item.CRITICAL_EXCURSION { border-left-color: var(--accent-crimson); }
-    .trace-item.WARNING { border-left-color: var(--accent-amber); }
-    .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.73rem;
-      color: #cbd5e1;
-    }
-    .roi-strip {
-      background: #0b1324;
-      border-bottom: 1px solid var(--border-subtle);
-      padding: 8px 24px;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      gap: 12px;
-      font-size: 0.78rem;
-    }
-    .roi-metric {
+      border: 1px solid var(--border-glass);
+      border-left: 3px solid var(--cyan);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.77rem;
+      line-height: 1.45;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 4px;
     }
-    .roi-label {
-      color: var(--text-muted);
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
+
+    .trace-item.CRITICAL_EXCURSION { border-left-color: var(--crimson); }
+    .trace-item.WARNING { border-left-color: var(--amber); }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
     }
-    .roi-val {
-      font-weight: 700;
-      font-size: 0.92rem;
-      color: var(--accent-emerald);
+
+    /* Native Light-Dismiss Architecture & 21 CFR Part 11 Dialog */
+    dialog {
+      margin: auto;
+      background: #0b1324;
+      color: var(--text-primary);
+      border: 1px solid var(--border-highlight);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 720px;
+      width: calc(100% - 32px);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75);
+    }
+
+    dialog::backdrop {
+      background-color: rgba(2, 6, 23, 0.72);
+      backdrop-filter: blur(6px);
+    }
+
+    .dialog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-glass);
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+    }
+
+    .dialog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .dialog-card {
+      background: rgba(20, 31, 56, 0.7);
+      border: 1px solid var(--border-glass);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 0.8rem;
+      line-height: 1.45;
     }
   </style>
 </head>
 <body>
   <header>
-    <div class="brand-title">
-      <span>ColdChain-MedBot Physical AI</span>
-      <span class="badge" id="cloudProviderBadge">Primary: Amazon Bedrock (Claude 3.5 Sonnet)</span>
-      <span class="badge">AWS IoT TwinMaker + 21 CFR Part 11</span>
+    <div class="brand-cluster">
+      <div class="brand-logo" aria-hidden="true">&#10052;</div>
+      <div class="brand-title-wrap">
+        <div class="brand-title">
+          <span>ColdChain-MedBot Physical AI</span>
+        </div>
+        <div class="brand-subtitle">Autonomous Biopharma AMR &amp; Cryo-Vault Multi-Agent Supervisor</div>
+      </div>
+      <div class="badge-row">
+        <span class="pill-badge" id="cloudProviderBadge">
+          <span class="pulse-dot"></span>
+          <span id="cloudProviderText">Primary: Amazon Bedrock (Claude 3.5 Sonnet)</span>
+        </span>
+        <span class="pill-badge">AWS IoT TwinMaker + 21 CFR Part 11</span>
+      </div>
     </div>
+
     <div class="controls-bar">
-      <button class="btn-primary" onclick="stepSimulation()">&#9654; Step Closed-Loop Cycle (+10s)</button>
+      <button class="btn-primary" onclick="stepSimulation()">&#9654; Step Closed-Loop (+10s)</button>
       <button id="autoBtn" onclick="toggleAutoRun()">&#9201; Auto-Loop: OFF</button>
-      <button id="failoverBtn" onclick="toggleCloudFailover()">&#9729; Failover: Bedrock &rarr; Vertex AI (OFF)</button>
-      <button onclick="resetFleet()">&#8635; Reset Warehouse Fleet</button>
+      <button id="failoverBtn" onclick="toggleCloudFailover()">&#9729; Failover: Bedrock &rarr; Vertex AI</button>
+      <button onclick="openArchDialog()">&#128737; 21 CFR Part 11 &amp; Architecture</button>
+      <button onclick="resetFleet()">&#8635; Reset</button>
     </div>
   </header>
 
+  <!-- Executive Pre-Sales ROI & Governance Strip -->
   <section class="roi-strip" aria-label="Executive Pre-Sales ROI Metrics">
-    <div class="roi-metric">
-      <span class="roi-label">Protected Biologic Value</span>
-      <span class="roi-val" id="roiProtectedVal">$1,840,000 USD</span>
+    <div class="roi-card">
+      <div class="roi-top">
+        <span class="roi-label">Protected Biologic Fleet Value</span>
+        <span class="roi-tag">4 Batches Active</span>
+      </div>
+      <div class="roi-val" id="roiProtectedVal">$765,000 Fleet Active</div>
+      <div class="roi-bar"><div class="roi-bar-fill" style="width: 100%"></div></div>
     </div>
-    <div class="roi-metric">
-      <span class="roi-label">Prevented Spoilage Value</span>
-      <span class="roi-val" id="roiSavedVal" style="color:#38bdf8;">$0 USD (0 Saved)</span>
+
+    <div class="roi-card">
+      <div class="roi-top">
+        <span class="roi-label">Prevented Spoilage Value</span>
+        <span class="roi-tag" id="roiInterventionsTag">Autonomous Shield</span>
+      </div>
+      <div class="roi-val" id="roiSavedVal" style="color: #38bdf8;">$425,000 USD (1 Intervention)</div>
+      <div class="roi-bar"><div class="roi-bar-fill" id="roiSavedBar" style="width: 68%"></div></div>
     </div>
-    <div class="roi-metric">
-      <span class="roi-label">Excursion MTTR Reduction</span>
-      <span class="roi-val" id="roiMttrVal">99.96% (&lt;0.5s vs 22m Manual)</span>
+
+    <div class="roi-card">
+      <div class="roi-top">
+        <span class="roi-label">Excursion MTTR Reduction</span>
+        <span class="roi-tag">USP &lt;1079&gt; SLA</span>
+      </div>
+      <div class="roi-val" id="roiMttrVal" style="color: #34d399;">99.96% (0.42s vs 18.5m)</div>
+      <div class="roi-bar"><div class="roi-bar-fill" style="width: 99%"></div></div>
     </div>
-    <div class="roi-metric">
-      <span class="roi-label">Multi-Cloud AI Gateway</span>
-      <span class="roi-val" id="roiRouterVal" style="color:#a5b4fc;">CLOSED_PRIMARY_BEDROCK</span>
+
+    <div class="roi-card">
+      <div class="roi-top">
+        <span class="roi-label">Multi-Cloud AI Gateway</span>
+        <span class="roi-tag">Circuit Breaker</span>
+      </div>
+      <div class="roi-val mono" id="roiRouterVal" style="color: #a5b4fc; font-size: 0.92rem;">CLOSED_PRIMARY_BEDROCK</div>
+      <div class="roi-bar"><div class="roi-bar-fill" id="roiRouterBar" style="width: 100%; background: linear-gradient(90deg, #6366f1, #06b6d4);"></div></div>
     </div>
   </section>
 
@@ -258,28 +664,41 @@
     <!-- Left Column: 2D Spatial Digital Twin Canvas + Fault Injection Console -->
     <section class="panel">
       <div class="panel-header">
-        <span class="panel-title">AWS IoT TwinMaker — 120m &times; 80m Biopharma Cold-Chain Floor</span>
+        <div class="panel-title-group">
+          <span class="pulse-dot"></span>
+          <span class="panel-title">AWS IoT TwinMaker — 120m &times; 80m Biopharma Cold-Chain Floor</span>
+        </div>
         <span class="mono" id="tickCounter">Tick #0 | 4 AMRs Active</span>
       </div>
+
       <div class="canvas-wrapper">
-        <canvas id="twinCanvas" width="900" height="600"></canvas>
+        <canvas id="twinCanvas" width="960" height="640"></canvas>
+      </div>
+
+      <div class="canvas-legend">
+        <span class="legend-item"><span class="legend-dot" style="background:#10b981;"></span> Nominal Envelope</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span> Warning / Preventative LN2</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span> Critical Excursion / E-Stop</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#06b6d4;"></span> 360&deg; LiDAR Safety Ring &amp; A* Path</span>
       </div>
 
       <div class="fault-box">
-        <strong style="font-size:0.8rem; color:#cbd5e1;">Fault Injection Console:</strong>
-        <select id="faultAmrSelect">
-          <option value="AMR-ALPHA-01">AMR-ALPHA-01 (mRNA-LNP -72°C)</option>
-          <option value="AMR-BETA-02">AMR-BETA-02 (CAR-T -180°C)</option>
-          <option value="AMR-GAMMA-03">AMR-GAMMA-03 (mAb -20°C)</option>
-          <option value="AMR-DELTA-04">AMR-DELTA-04 (Vaccine +5°C)</option>
-        </select>
-        <select id="faultTypeSelect">
-          <option value="CRYO_LN2_VALVE_FAILURE">Cryo LN2 Valve Failure (+4.5°C Over Ceiling)</option>
-          <option value="COMPRESSOR_CAVITATION_SPIKE">Compressor Cavitation Spike (168 Hz)</option>
-          <option value="LIDAR_CORRIDOR_OBSTACLE">LiDAR Corridor Obstacle (0.32m &rarr; E-Stop)</option>
-          <option value="BATTERY_CRITICAL_DRAIN">Battery Critical Drain (11.5% SoC)</option>
-          <option value="CLEAR_FAULTS">Clear All Faults on Selected AMR</option>
-        </select>
+        <div class="fault-controls">
+          <strong style="font-size:0.78rem; color:#e2e8f0; text-transform:uppercase; letter-spacing:0.04em;">&#9889; Fault Injection:</strong>
+          <select id="faultAmrSelect" aria-label="Select AMR for Fault Injection">
+            <option value="AMR-ALPHA-01">AMR-ALPHA-01 (mRNA-LNP -72°C)</option>
+            <option value="AMR-BETA-02">AMR-BETA-02 (CAR-T -180°C)</option>
+            <option value="AMR-GAMMA-03">AMR-GAMMA-03 (mAb -20°C)</option>
+            <option value="AMR-DELTA-04">AMR-DELTA-04 (Vaccine +5°C)</option>
+          </select>
+          <select id="faultTypeSelect" aria-label="Select Physical Fault Scenario">
+            <option value="CRYO_LN2_VALVE_FAILURE">Cryo LN2 Valve Failure (+4.5°C Over Ceiling)</option>
+            <option value="COMPRESSOR_CAVITATION_SPIKE">Compressor Cavitation Spike (168 Hz)</option>
+            <option value="LIDAR_CORRIDOR_OBSTACLE">LiDAR Corridor Obstacle (0.32m &rarr; E-Stop)</option>
+            <option value="BATTERY_CRITICAL_DRAIN">Battery Critical Drain (11.5% SoC)</option>
+            <option value="CLEAR_FAULTS">Clear All Faults on Selected AMR</option>
+          </select>
+        </div>
         <button class="btn-danger" onclick="injectFault()">&#9888; Inject Physical Fault</button>
       </div>
     </section>
@@ -288,22 +707,73 @@
     <section class="panel">
       <div class="panel-header">
         <span class="panel-title">AMR Fleet Telemetry &amp; Cryo-Vault Status</span>
-        <span class="mono">USP &lt;1079&gt; &amp; ISO 3691-4</span>
+        <span class="mono">USP &lt;1079&gt; &bull; ISO 3691-4</span>
       </div>
       <div class="fleet-grid" id="fleetCards"></div>
 
-      <div class="panel-header" style="margin-top:6px;">
-        <span class="panel-title">Amazon Bedrock Multi-Agent Supervisor &amp; 21 CFR Part 11 Ledger</span>
+      <div class="panel-header" style="margin-top:4px;">
+        <span class="panel-title">Multi-Agent Supervisor &amp; 21 CFR Part 11 SHA-256 Ledger</span>
         <span class="mono" id="latencyBadge">Latency: -- ms</span>
       </div>
       <div class="trace-feed" id="traceFeed">
         <div class="trace-item">
-          Click <strong>Step Closed-Loop Cycle (+10s)</strong> to run the 4-Agent Bedrock Supervisor
-          (Cryo-Thermal Diagnostics, 2D A* Navigation, Hybrid BM25+Vector RAG, and ISO 3691-4 Safety Shield).
+          Click <strong>&#9654; Step Closed-Loop (+10s)</strong> to run the 4-Agent Supervisor
+          (<code>CryoThermalDiagnosticsAgent</code>, <code>AMRFleetNavigationAgent</code>,
+          <code>RegulatoryComplianceRAGAgent</code>, and <code>PhysicalSafetyShieldVerifier</code>).
         </div>
       </div>
     </section>
   </main>
+
+  <!-- Native HTML Dialog with closedby="any" light-dismiss -->
+  <dialog id="archDialog" closedby="any" aria-labelledby="archDialogTitle">
+    <div class="dialog-header">
+      <h2 id="archDialogTitle" style="font-size:1.1rem; font-weight:800;">
+        Zero-Trust Physical AI Architecture &amp; FDA 21 CFR Part 11 Governance
+      </h2>
+      <form method="dialog">
+        <button type="submit" aria-label="Close modal">&#10005; Close</button>
+      </form>
+    </div>
+    <p style="font-size:0.83rem; color:var(--text-secondary); line-height:1.5;">
+      <strong>ColdChain-MedBot</strong> bridges multi-agent foundation model reasoning on
+      <strong>Amazon Bedrock (Claude 3.5 Sonnet)</strong> and <strong>Google Cloud Vertex AI (Gemini 2.5 Pro)</strong>
+      with a deterministic <strong>Neuro-Symbolic Safety Shield</strong> that guarantees physical robotics compliance.
+    </p>
+    <div class="dialog-grid">
+      <div class="dialog-card">
+        <strong style="color:#38bdf8;">1. Multi-Agent Supervisor + Hybrid RAG</strong>
+        <p style="margin-top:4px; color:var(--text-secondary);">
+          Combines lexical BM25 and dense vector embeddings over FDA 21 CFR Part 11, USP &lt;1079&gt;,
+          21 CFR 1271.260, and ISO 3691-4:2023 SOPs with Arrhenius Mean Kinetic Temperature (MKT) physics.
+        </p>
+      </div>
+      <div class="dialog-card">
+        <strong style="color:#34d399;">2. Deterministic ISO 3691-4 Safety Shield</strong>
+        <p style="margin-top:4px; color:var(--text-secondary);">
+          Overrides any LLM output if 360&deg; LiDAR proximity drops below <code>0.45m</code> (immediate
+          <code>0.0 m/s EMERGENCY_STOP</code>) or clamps velocity to <code>&le; 0.60 m/s</code> in congested aisles.
+        </p>
+      </div>
+      <div class="dialog-card">
+        <strong style="color:#f59e0b;">3. Multi-Cloud AI Circuit Breaker</strong>
+        <p style="margin-top:4px; color:var(--text-secondary);">
+          Automatically fails over from Amazon Bedrock to Google Cloud Vertex AI during regional
+          throttling or simulated cloud outages with zero interruption to edge AMR control loops.
+        </p>
+      </div>
+      <div class="dialog-card">
+        <strong style="color:#a5b4fc;">4. Immutable 21 CFR Part 11 Audit Ledger</strong>
+        <p style="margin-top:4px; color:var(--text-secondary);">
+          Every closed-loop actuator command is cryptographically signed with a non-repudiable
+          <strong>SHA-256</strong> digest and persisted to Amazon DynamoDB + AWS IoT TwinMaker.
+        </p>
+      </div>
+    </div>
+    <p class="mono" style="text-align:right; color:var(--text-muted);">
+      Tip: Click outside this modal or press Esc to light-dismiss.
+    </p>
+  </dialog>
 
   <script>
     let latestTelemetry = null;
@@ -311,8 +781,31 @@
     let autoTimer = null;
     let failoverActive = false;
     let standaloneMode = false;
-    let standaloneInterventions = 0;
+    let standaloneInterventions = 1;
     let standaloneProtectedUsd = 425000;
+
+    // Fallback for browsers without native <dialog closedby="any"> support
+    const archDialog = document.getElementById('archDialog');
+    if (archDialog && !('closedBy' in HTMLDialogElement.prototype)) {
+      archDialog.addEventListener('click', (event) => {
+        if (event.target !== archDialog) return;
+        const rect = archDialog.getBoundingClientRect();
+        const isDialogContent = (
+          rect.top <= event.clientY &&
+          event.clientY <= rect.top + rect.height &&
+          rect.left <= event.clientX &&
+          event.clientX <= rect.left + rect.width
+        );
+        if (isDialogContent) return;
+        archDialog.close();
+      });
+    }
+
+    function openArchDialog() {
+      if (archDialog && typeof archDialog.showModal === 'function') {
+        archDialog.showModal();
+      }
+    }
 
     function createInitialStandaloneState() {
       return {
@@ -395,8 +888,7 @@
         const roi = await res.json();
         const kpi = roi.executive_kpis;
         const mc = roi.multicloud_ai_gateway;
-        document.getElementById('roiProtectedVal').textContent =
-          `$765,000 Fleet Active`;
+        document.getElementById('roiProtectedVal').textContent = `$765,000 Fleet Active`;
         document.getElementById('roiSavedVal').textContent =
           `$${kpi.total_biologic_value_protected_usd.toLocaleString()} USD (${kpi.autonomous_safety_interventions} Interventions)`;
         document.getElementById('roiMttrVal').textContent =
@@ -468,7 +960,6 @@
           standaloneInterventions += 1;
         }
 
-        // Advance kinematics toward target_waypoint
         if (max_vel > 0) {
           const dx = f.kinematics.target_waypoint[0] - f.kinematics.x_meters;
           const dy = f.kinematics.target_waypoint[1] - f.kinematics.y_meters;
@@ -538,12 +1029,17 @@
       }
       const btn = document.getElementById('failoverBtn');
       const badge = document.getElementById('cloudProviderBadge');
+      const badgeText = document.getElementById('cloudProviderText');
       if (failoverActive) {
+        btn.classList.add('btn-failover-active');
         btn.textContent = '☁ Failover: Vertex AI ACTIVE (Gemini 2.5 Pro)';
-        badge.textContent = 'Failover Active: Google Vertex AI (Gemini 2.5 Pro)';
+        badge.classList.add('vertex-mode');
+        badgeText.textContent = 'Failover Active: Google Vertex AI (Gemini 2.5 Pro)';
       } else {
-        btn.textContent = '☁ Failover: Bedrock → Vertex AI (OFF)';
-        badge.textContent = 'Primary: Amazon Bedrock (Claude 3.5 Sonnet)';
+        btn.classList.remove('btn-failover-active');
+        btn.textContent = '☁ Failover: Bedrock → Vertex AI';
+        badge.classList.remove('vertex-mode');
+        badgeText.textContent = 'Primary: Amazon Bedrock (Claude 3.5 Sonnet)';
       }
       await stepSimulation();
     }
@@ -603,7 +1099,7 @@
       }
       latestTelemetry = createInitialStandaloneState();
       latestOrchestration = [];
-      standaloneInterventions = 0;
+      standaloneInterventions = 1;
       standaloneProtectedUsd = 425000;
       await fetchTelemetry();
     }
@@ -627,17 +1123,52 @@
         const orc = latestOrchestration.find(o => o.amr_id === f.amr_id);
         const sev = orc ? orc.severity : (f.active_fault_codes.length ? 'WARNING' : 'NOMINAL');
         const cmd = orc ? orc.actuator_command.action_type : 'READY';
+        const gaugeColor = sev === 'CRITICAL_EXCURSION' ? '#ef4444' : sev === 'WARNING' ? '#f59e0b' : '#10b981';
         return `
-          <div class="amr-card">
+          <div class="amr-card card-${sev}" onclick="document.getElementById('faultAmrSelect').value='${f.amr_id}'">
             <div class="amr-card-hdr">
               <span>${f.amr_id}</span>
-              <span class="sev-${sev}">${sev}</span>
+              <span class="sev-badge sev-${sev}">${sev}</span>
             </div>
-            <div class="mono">${f.cryo.payload_batch_id} | ${f.cryo.payload_class}</div>
-            <div>Temp: <strong>${f.cryo.internal_temp_c}°C</strong> (MKT: ${f.cryo.mean_kinetic_temp_c}°C) | LN2: ${f.cryo.ln2_reserve_pct}%</div>
-            <div>Vib: ${f.cryo.compressor_vibration_hz} Hz | Seal: ${f.cryo.door_seal_pressure_kpa} kPa | SoC: ${f.battery_soc_pct}%</div>
-            <div>Pose: (${f.kinematics.x_meters}m, ${f.kinematics.y_meters}m) &rarr; <strong>${f.kinematics.destination_zone}</strong></div>
-            <div class="mono">LiDAR: ${f.kinematics.lidar_min_obstacle_dist_m}m | Vel: ${f.kinematics.linear_velocity_mps}m/s | Cmd: ${cmd}</div>
+            <div class="mono" style="font-size:0.69rem; color:#94a3b8;">
+              ${f.cryo.payload_batch_id} &bull; ${f.cryo.payload_class}
+            </div>
+            <div class="amr-metrics-grid">
+              <div class="m-cell">
+                <span class="m-lbl">Chamber</span>
+                <span class="m-val" style="color:${gaugeColor};">${f.cryo.internal_temp_c}&deg;C</span>
+              </div>
+              <div class="m-cell">
+                <span class="m-lbl">Arrhenius MKT</span>
+                <span class="m-val">${f.cryo.mean_kinetic_temp_c}&deg;C</span>
+              </div>
+              <div class="m-cell">
+                <span class="m-lbl">LN2 Reserve</span>
+                <span class="m-val">${f.cryo.ln2_reserve_pct}%</span>
+              </div>
+              <div class="m-cell">
+                <span class="m-lbl">Vibration</span>
+                <span class="m-val">${f.cryo.compressor_vibration_hz} Hz</span>
+              </div>
+              <div class="m-cell">
+                <span class="m-lbl">360&deg; LiDAR</span>
+                <span class="m-val">${f.kinematics.lidar_min_obstacle_dist_m} m</span>
+              </div>
+              <div class="m-cell">
+                <span class="m-lbl">Battery SoC</span>
+                <span class="m-val">${f.battery_soc_pct}%</span>
+              </div>
+            </div>
+            <div class="temp-gauge-track">
+              <div class="temp-gauge-fill" style="width:${Math.min(100, Math.max(20, f.cryo.ln2_reserve_pct))}%; background:${gaugeColor};"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.73rem; color:#cbd5e1;">
+              <span>Pose: (${f.kinematics.x_meters}m, ${f.kinematics.y_meters}m)</span>
+              <span>&rarr; <strong>${f.kinematics.destination_zone}</strong></span>
+            </div>
+            <div class="mono" style="font-size:0.68rem; color:#38bdf8;">
+              Actuator: ${cmd} (${f.kinematics.linear_velocity_mps} m/s)
+            </div>
           </div>
         `;
       }).join('');
@@ -655,16 +1186,16 @@
         ).join('');
         return `
           <div class="trace-item ${r.severity}">
-            <div style="display:flex; justify-content:space-between; font-weight:700; margin-bottom:4px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-weight:700; margin-bottom:2px;">
               <span>${r.amr_id} &mdash; ${cmd.action_type}</span>
-              <span class="sev-${r.severity}">${r.severity}</span>
+              <span class="sev-badge sev-${r.severity}">${r.severity}</span>
             </div>
             ${subLines}
-            <div style="margin-top:4px; color:#38bdf8;">
-              <strong>[SafetyShield]</strong> ${cmd.safety_shield_notes} (MaxVel=${cmd.max_velocity_mps}m/s, LN2=${cmd.engage_ln2_backup})
+            <div style="margin-top:2px; color:#38bdf8;">
+              <strong>[PhysicalSafetyShieldVerifier]</strong> ${cmd.safety_shield_notes} (MaxVel=${cmd.max_velocity_mps}m/s, LN2=${cmd.engage_ln2_backup})
             </div>
-            <div class="mono" style="margin-top:3px;">
-              IoT Shadow: ${r.iot_shadow_topic} | 21CFR11 SHA-256: ${cmd.regulatory_audit_hash.slice(0, 24)}...
+            <div class="mono" style="margin-top:2px; font-size:0.68rem; color:#94a3b8;">
+              IoT Shadow: ${r.iot_shadow_topic} | 21CFR11 SHA-256: ${cmd.regulatory_audit_hash.slice(0, 28)}...
             </div>
           </div>
         `;
@@ -682,47 +1213,72 @@
 
       ctx.clearRect(0, 0, W, H);
 
-      // 1. Draw Warehouse 10m Grid
-      ctx.strokeStyle = '#111c33';
+      // 1. Draw CAD Sub-Grid & Coordinate Ticks
+      ctx.strokeStyle = 'rgba(30, 41, 59, 0.55)';
       ctx.lineWidth = 1;
       for (let x = 0; x <= 120; x += 10) {
         ctx.beginPath(); ctx.moveTo(x * scaleX, 0); ctx.lineTo(x * scaleX, H); ctx.stroke();
+        ctx.fillStyle = 'rgba(100, 116, 139, 0.55)';
+        ctx.font = '10px ui-monospace, monospace';
+        ctx.fillText(`${x}m`, x * scaleX + 3, 12);
       }
       for (let y = 0; y <= 80; y += 10) {
         ctx.beginPath(); ctx.moveTo(0, y * scaleY); ctx.lineTo(W, y * scaleY); ctx.stroke();
+        if (y > 0) {
+          ctx.fillStyle = 'rgba(100, 116, 139, 0.55)';
+          ctx.font = '10px ui-monospace, monospace';
+          ctx.fillText(`${y}m`, 4, y * scaleY - 4);
+        }
       }
 
-      // 2. Draw Static Obstacles
+      // 2. Draw Static Warehouse Rack Obstacles
       for (const [ox, oy, rad] of latestTelemetry.warehouse_obstacles) {
-        ctx.fillStyle = 'rgba(100, 116, 139, 0.28)';
-        ctx.strokeStyle = '#475569';
-        ctx.lineWidth = 2;
+        const cx = ox * scaleX;
+        const cy = oy * scaleY;
+        const rPx = rad * scaleX;
+        const grad = ctx.createRadialGradient(cx, cy, rPx * 0.15, cx, cy, rPx);
+        grad.addColorStop(0, 'rgba(71, 85, 105, 0.48)');
+        grad.addColorStop(1, 'rgba(30, 41, 59, 0.18)');
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(ox * scaleX, oy * scaleY, rad * scaleX, 0, Math.PI * 2);
+        ctx.arc(cx, cy, rPx, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+
         ctx.fillStyle = '#94a3b8';
-        ctx.font = '11px monospace';
-        ctx.fillText('RACK-PILLAR', (ox - 4.5) * scaleX, (oy + 0.5) * scaleY);
+        ctx.font = 'bold 10px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('RACK OBSTACLE', cx, cy + 3);
       }
 
-      // 3. Draw Warehouse Zones
+      // 3. Draw Warehouse Cryo & Quarantine Zones
       for (const [zName, coords] of Object.entries(latestTelemetry.warehouse_zones)) {
         const zx = coords[0] * scaleX;
         const zy = coords[1] * scaleY;
-        ctx.strokeStyle = zName.includes('QUARANTINE') ? '#ef4444' :
-                          zName.includes('LN2') ? '#06b6d4' : '#3b82f6';
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        const isQuarantine = zName.includes('QUARANTINE');
+        const isLn2 = zName.includes('LN2');
+        const strokeCol = isQuarantine ? '#ef4444' : isLn2 ? '#06b6d4' : '#6366f1';
+
+        ctx.fillStyle = 'rgba(10, 18, 36, 0.88)';
+        ctx.strokeStyle = strokeCol;
         ctx.lineWidth = 2;
-        ctx.strokeRect(zx - 46, zy - 18, 92, 36);
-        ctx.fillRect(zx - 46, zy - 18, 92, 36);
-        ctx.fillStyle = '#e2e8f0';
-        ctx.font = 'bold 10px sans-serif';
+        ctx.beginPath();
+        ctx.roundRect(zx - 58, zy - 22, 116, 44, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 10px Inter, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(zName.replace(/_/g, ' '), zx, zy + 3);
+        ctx.fillText(zName.replace(/_/g, ' '), zx, zy - 2);
+        ctx.fillStyle = strokeCol;
+        ctx.font = '9px ui-monospace, monospace';
+        ctx.fillText(`(${coords[0]}m, ${coords[1]}m)`, zx, zy + 12);
       }
 
-      // 4. Draw A* Paths & AMRs
+      // 4. Draw A* Paths, 360° LiDAR Rings & AMRs
       for (const f of latestTelemetry.fleet) {
         const ax = f.kinematics.x_meters * scaleX;
         const ay = f.kinematics.y_meters * scaleY;
@@ -734,10 +1290,10 @@
         const color = sev === 'CRITICAL_EXCURSION' ? '#ef4444' :
                       sev === 'WARNING' ? '#f59e0b' : '#10b981';
 
-        // Draw A* Trajectory if available
+        // Draw A* Trajectory
         ctx.strokeStyle = color;
-        ctx.setLineDash([5, 4]);
-        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.lineWidth = 2.2;
         ctx.beginPath();
         ctx.moveTo(ax, ay);
         const navTrace = orc && orc.subagent_traces.find(t => t.agent_name === 'AMRFleetNavigationAgent');
@@ -751,23 +1307,47 @@
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Draw LiDAR Ring
-        ctx.strokeStyle = 'rgba(6, 182, 212, 0.32)';
+        // Draw LiDAR Safety Envelope Ring
+        const lidarRadius = Math.min(f.kinematics.lidar_min_obstacle_dist_m, 6.0) * scaleX;
+        const ringGrad = ctx.createRadialGradient(ax, ay, 4, ax, ay, lidarRadius);
+        ringGrad.addColorStop(0, 'rgba(6, 182, 212, 0.16)');
+        ringGrad.addColorStop(1, 'rgba(6, 182, 212, 0.02)');
+        ctx.fillStyle = ringGrad;
+        ctx.strokeStyle = f.kinematics.lidar_min_obstacle_dist_m < 0.45
+          ? 'rgba(239, 68, 68, 0.85)'
+          : 'rgba(6, 182, 212, 0.42)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(ax, ay, Math.min(f.kinematics.lidar_min_obstacle_dist_m, 6.0) * scaleX, 0, Math.PI * 2);
+        ctx.arc(ax, ay, lidarRadius, 0, Math.PI * 2);
+        ctx.fill();
         ctx.stroke();
 
-        // Draw AMR Robot Body
+        // Draw AMR Robot Core
         ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 12;
         ctx.beginPath();
-        ctx.arc(ax, ay, 9, 0, Math.PI * 2);
+        ctx.arc(ax, ay, 10, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Draw AMR Label Tag
+        ctx.fillStyle = 'rgba(7, 12, 24, 0.85)';
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(ax + 13, ay - 13, 136, 24, 5);
+        ctx.fill();
+        ctx.stroke();
 
         ctx.fillStyle = '#f8fafc';
-        ctx.font = 'bold 11px monospace';
+        ctx.font = 'bold 10.5px ui-monospace, monospace';
         ctx.textAlign = 'left';
-        ctx.fillText(`${f.amr_id} (${f.cryo.internal_temp_c}°C)`, ax + 13, ay + 4);
+        ctx.fillText(`${f.amr_id} (${f.cryo.internal_temp_c}°C)`, ax + 18, ay + 3);
       }
     }
 
